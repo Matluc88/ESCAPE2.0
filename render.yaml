@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: escape-room-3d
+    runtime: static
+    buildCommand: git lfs install && git lfs pull && npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_WS_URL
+        sync: false
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=0, must-revalidate
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

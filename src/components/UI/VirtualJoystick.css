@@ -1,0 +1,72 @@
+.virtual-joystick {
+  position: fixed;
+  bottom: 30px;
+  z-index: 1000;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.virtual-joystick.left {
+  left: 20px;
+}
+
+.virtual-joystick.right {
+  right: 20px;
+}
+
+.joystick-base {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+.virtual-joystick.active .joystick-base {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.joystick-knob {
+  position: absolute;
+  border-radius: 50%;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(200, 200, 200, 0.9));
+  box-shadow: 
+    0 4px 15px rgba(0, 0, 0, 0.3),
+    inset 0 2px 4px rgba(255, 255, 255, 0.5);
+  transition: transform 0.05s ease-out;
+}
+
+.virtual-joystick.active .joystick-knob {
+  background: linear-gradient(145deg, #4CAF50, #45a049);
+  box-shadow: 
+    0 4px 20px rgba(76, 175, 80, 0.5),
+    inset 0 2px 4px rgba(255, 255, 255, 0.3);
+}
+
+/* Direction indicators */
+.joystick-base::before,
+.joystick-base::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.joystick-base::before {
+  width: 2px;
+  height: 30%;
+  top: 10%;
+}
+
+.joystick-base::after {
+  width: 30%;
+  height: 2px;
+  left: 10%;
+}

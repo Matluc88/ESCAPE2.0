@@ -1,0 +1,82 @@
+.rotate-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  color: white;
+}
+
+.rotate-content {
+  text-align: center;
+  padding: 40px;
+  max-width: 300px;
+}
+
+.rotate-icon {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 30px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.phone-icon {
+  animation: rotate-phone 2s ease-in-out infinite;
+  transform-origin: center center;
+}
+
+.rotate-arrow {
+  position: absolute;
+  top: 50%;
+  right: -50px;
+  transform: translateY(-50%);
+  animation: arrow-bounce 1s ease-in-out infinite;
+}
+
+.rotate-title {
+  font-size: 24px;
+  font-weight: bold;
+  margin: 0 0 15px 0;
+  color: #fff;
+}
+
+.rotate-message {
+  font-size: 16px;
+  color: #aaa;
+  margin: 0;
+  line-height: 1.5;
+}
+
+@keyframes rotate-phone {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-90deg);
+  }
+}
+
+@keyframes arrow-bounce {
+  0%, 100% {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+  50% {
+    opacity: 0.5;
+    transform: translateY(-50%) translateX(10px);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}

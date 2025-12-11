@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: escape-house-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: MQTT_HOST
+        sync: false
+      - key: MQTT_PORT
+        value: 1883
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        sync: false
+      - key: WS_PORT
+        value: 3000
+    healthCheckPath: /health
+    autoDeploy: true
+
+databases:
+  - name: escape-house-db
+    databaseName: escape_db
+    user: escape_user
+    plan: free

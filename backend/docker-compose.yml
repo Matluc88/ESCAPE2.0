@@ -1,0 +1,66 @@
+version: "3.9"
+
+services:
+  web:
+    build: .
+    container_name: escape-backend
+    restart: always
+    env_file: .env
+    environment:
+      - DATABASE_URL=postgresql://escape_user:escape_pass@db:5432/escape_db
+      - MQTT_HOST=mqtt
+      - MQTT_PORT=1883
+    depends_on:
+      db:
+        condition: service_healthy
+      mqtt:
+        condition: service_started
+    ports:
+      - "3000:3000"
+    networks:
+      - escape-network
+    volumes:
+      - ./app:/app/app:ro
+
+  db:
+    image: postgres:15-alpine
+    container_name: escape-db
+    restart: always
+    environment:
+      POSTGRES_USER: escape_user
+      POSTGRES_PASSWORD: escape_pass
+      POSTGRES_DB: escape_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - escape-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U escape_user -d escape_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mqtt:
+    image: eclipse-mosquitto:2
+    container_name: escape-mqtt
+    restart: always
+    volumes:
+      - ./mosquitto/config:/mosquitto/config:ro
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    networks:
+      - escape-network
+
+networks:
+  escape-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  mosquitto_data:
+  mosquitto_log:
