@@ -154,7 +154,20 @@ export default function CasaModel({
     let foundSpawnPoint = null
     let gateEyeHeight = null
     const currentScene = sceneType.toLowerCase()
-    const otherRooms = ['camera', 'bagno', 'soggiorno', 'cucina'].filter(r => r !== currentScene)
+    
+    // Mappatura stanze -> pattern oggetti GLB
+    // Gli oggetti nel GLB usano nomi diversi dalle stanze (es. "camera" -> oggetti con "letto")
+    const roomToObjectPatterns = {
+        'camera': ['letto', 'camera'],      // Camera da letto -> oggetti con "letto" o "camera"
+        'bagno': ['bagno'],
+        'soggiorno': ['soggiorno'],
+        'cucina': ['cucina']
+    }
+    
+    // Ottieni i pattern delle altre stanze (non quella corrente)
+    const otherRoomPatterns = Object.entries(roomToObjectPatterns)
+        .filter(([room]) => room !== currentScene)
+        .flatMap(([, patterns]) => patterns)
     
     // Liste per forzare il passaggio al controller
     const forcedCollidables = []
@@ -198,9 +211,23 @@ export default function CasaModel({
                 const b = new Box3().setFromObject(child); const c = new Vector3(); b.getCenter(c); gateEyeHeight = c.y
             }
         } else {
-            let hide = otherRooms.some(r => name.includes(r))
-            const struct = /muro|wall|porta|door|finestra|window|vetro|glass|infisso|pavimento|floor|soffitto|ceiling|tetto|roof|piano|terra|ringhiera|cantina|ingresso|maniglia|handle|pattern|body|гольфстрим/i.test(name)
-            if (struct) hide = false
+            // Verifica se l'oggetto appartiene ad un'altra stanza usando i pattern corretti
+            const belongsToOtherRoom = otherRoomPatterns.some(pattern => name.includes(pattern))
+            
+            // Se appartiene ad un'altra stanza, nascondi SEMPRE (anche se è strutturale)
+            // Eccezione: solo elementi veramente condivisi come ingresso, cantina, ringhiera
+            const isSharedStructure = /cantina|ingresso|ringhiera|pattern|body|гольфстрим/i.test(name)
+            
+            // Elementi strutturali generici (muri, pavimenti, etc.) sono visibili SOLO se:
+            // 1. Non appartengono ad altre stanze, OPPURE
+            // 2. Sono strutture condivise (ingresso, cantina, etc.)
+            const isStructural = /muro|wall|porta|door|finestra|window|vetro|glass|infisso|pavimento|floor|soffitto|ceiling|tetto|roof|piano|terra|maniglia|handle/i.test(name)
+            
+            let hide = false
+            if (belongsToOtherRoom && !isSharedStructure) {
+                hide = true
+            }
+            
             child.visible = !hide
             if (child.visible) {
                  if (child.raycast && child.raycast._bak) delete child.raycast
