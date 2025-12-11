@@ -3,11 +3,11 @@ import { useThree, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
 // ========================================
-// NUOVO SISTEMA COLLISIONE - Variabili Globali
+// NUOVO SISTEMA COLLISIONE - Variabili Globali (OTTIMIZZATO)
 // ========================================
 let penetratingFrames = 0
-const MAX_PENETRATING_FRAMES_BEFORE_SNAP = 8  // Aumentato per ridurre snap prematuri
-const PENETRATION_EPS = 0.05                   // Tolleranza 5cm (era 2cm)
+const MAX_PENETRATING_FRAMES_BEFORE_SNAP = 10  // Più paziente per evitare snap prematuri
+const PENETRATION_EPS = 0.08                   // Tolleranza aumentata per fluidità
 const SKIP_ANTI_TUNNEL_FRAMES = 12             // Skip più lungo allo spawn
 const SNAP_MIN_DELTA = 0.05                    // Esegui snap solo se delta > 5cm
 const SNAP_LERP = 0.2                          // Lerp per snap smooth
@@ -34,13 +34,13 @@ const SNAP_LERP = 0.2                          // Lerp per snap smooth
  * @param {Object} boundaryLimits - Optional boundary limits { minX, maxX, minZ, maxZ } to constrain player movement within house perimeter
  * @param {Object} initialPosition - Optional initial spawn position { x, y, z } for the player (defaults to { x: 0, y: 0, z: 5 })
  * @param {number} initialYaw - Optional initial yaw rotation in radians (defaults to 0, which faces -Z direction)
- * @param {number} eyeHeight - Optional eye height in scene units (defaults to 1.6 for standard human height, use scaled value for scaled models)
+ * @param {number} eyeHeight - Optional eye height in scene units (defaults to 1.15 for very low camera view, use scaled value for scaled models)
  * @param {number} collisionRadius - Optional collision radius in scene units (defaults to 0.3, use scaled value for scaled models)
  * @param {number} playerHeight - Optional player height in scene units (defaults to 1.8, use scaled value for scaled models)
- * @param {number} moveSpeed - Optional movement speed in scene units per second (defaults to 5.0, use scaled value for scaled models)
+ * @param {number} moveSpeed - Optional movement speed in scene units per second (defaults to 0.1 for extremely slow crawl speed, use scaled value for scaled models)
  * @returns {Object} - Controls state and methods
  */
-export function useFPSControls(collisionObjects = [], mobileInput = null, groundObjects = null, boundaryLimits = null, initialPosition = null, initialYaw = 0, eyeHeight = 1.6, collisionRadius = 0.3, playerHeight = 1.8, moveSpeed = 5.0, disableGravity = false) {
+export function useFPSControls(collisionObjects = [], mobileInput = null, groundObjects = null, boundaryLimits = null, initialPosition = null, initialYaw = 0, eyeHeight = 1.15, collisionRadius = 0.3, playerHeight = 1.8, moveSpeed = 0.1, disableGravity = false) {
   const { camera, gl, scene } = useThree()
   
   // Transform hierarchy refs
@@ -102,10 +102,10 @@ export function useFPSControls(collisionObjects = [], mobileInput = null, ground
   // Head bobbing toggle - set to false to disable camera bobbing when walking
   const ENABLE_HEAD_BOBBING = false
   
-  // --- TUNING ANTI-JITTER (Movimento Fluido) ---
+  // --- TUNING ANTI-JITTER (Movimento Fluido) - OTTIMIZZATO ---
   
-  // Aumenta la tolleranza: ignoriamo penetrazioni sotto i 10cm
-  const PENETRATION_THRESHOLD = 0.1
+  // Aumenta la tolleranza: ignoriamo penetrazioni sotto i 15cm per movimento più fluido
+  const PENETRATION_THRESHOLD = 0.15
   
   // ========================================
   // DIAGNOSTIC: Temporary threshold adjustment to test if geometry is the issue
@@ -115,25 +115,24 @@ export function useFPSControls(collisionObjects = [], mobileInput = null, ground
   const DIAGNOSTIC_PERMISSIVE_THRESHOLD = false
   const DIAGNOSTIC_THRESHOLD_OFFSET = DIAGNOSTIC_PERMISSIVE_THRESHOLD ? -0.10 : 0
   
-  // Camera collision configuration - ANTI-JITTER: valori molto morbidi
-  const CAMERA_COLLISION_RADIUS = collisionRadius * 0.25 // Ridotto per non sbattere sugli stipiti
-  const CAMERA_MIN_DISTANCE_FROM_WALL = 0.01 // Quasi zero per evitare respingimenti improvvisi
-  const CAMERA_CORRECTION_LERP_FACTOR = 0.05 // MOLTO BASSO: correzione fluida, meno scattosa
-  const ANTI_TUNNELLING_STEPS = 3 // Ridotto per alleggerire il calcolo
+  // Camera collision configuration - OTTIMIZZATO per fluidità massima
+  const CAMERA_COLLISION_RADIUS = collisionRadius * 0.25
+  const CAMERA_MIN_DISTANCE_FROM_WALL = 0.01
+  const CAMERA_CORRECTION_LERP_FACTOR = 0.2 // AUMENTATO: da 0.05 a 0.2 per movimento più reattivo
+  const ANTI_TUNNELLING_STEPS = 2 // RIDOTTO: da 3 a 2 per performance
   
   // ========================================
-  // DEBUG CONFIGURATION
-  // Set CAMERA_DEBUG to true to enable collision debugging
-  // In production, this should be false to avoid console spam
+  // DEBUG CONFIGURATION - OTTIMIZZATO (Disabilitato per produzione)
+  // Set CAMERA_DEBUG to false in production to avoid console spam and improve performance
   // ========================================
-  const CAMERA_DEBUG = true // ATTIVATO per debug collisioni
+  const CAMERA_DEBUG = false // DISABILITATO per performance ottimale
   const CAMERA_DEBUG_FLAGS = {
     sphereCast: false,       // Log sphere-cast hits, distances, directions (VERBOSE)
     antiTunnelling: false,   // Log anti-tunnelling checks (VERBOSE)
     updateOrder: false,      // Log complete update order per frame (VERBOSE)
     filtering: false,        // Log excluded objects and reasons (VERBOSE)
     proximity: false,        // Log proximity alerts (VERBOSE)
-    colliderQuality: true,   // Log collider mesh quality info (UTILE - solo 1x per object)
+    colliderQuality: false,  // Log collider mesh quality info (DISABILITATO)
     gizmos: false            // Enable visual gizmos (requires DebugGizmos component)
   }
   
@@ -717,8 +716,9 @@ export function useFPSControls(collisionObjects = [], mobileInput = null, ground
   }
   
   /**
-   * Perform sphere-cast-like collision detection using multiple rays
+   * Perform sphere-cast-like collision detection using multiple rays (OTTIMIZZATO)
    * Simulates a sphere moving through space by casting rays from multiple points on the sphere surface
+   * RIDOTTO: da ~32 raggi a ~12 raggi per massima performance
    * @param {THREE.Vector3} position - Center position of the sphere
    * @param {number} radius - Radius of the collision sphere
    * @param {THREE.Vector3} direction - Direction to check (optional, if null checks all directions)
@@ -746,10 +746,9 @@ export function useFPSControls(collisionObjects = [], mobileInput = null, ground
       perpX.normalize()
       const perpY = new THREE.Vector3().crossVectors(normalizedDir, perpX).normalize()
       
-      // Sample points on the sphere surface facing the direction (increased samples)
-      // 8 angles instead of 4 for better coverage
-      const sampleAngles = [0, Math.PI / 4, Math.PI / 2, 3 * Math.PI / 4, Math.PI, 5 * Math.PI / 4, 3 * Math.PI / 2, 7 * Math.PI / 4]
-      const sampleRadii = [0, radius * 0.33, radius * 0.66, radius]
+      // OTTIMIZZATO: Ridotto da 8 a 4 angoli e da 4 a 3 radii
+      const sampleAngles = [0, Math.PI / 2, Math.PI, 3 * Math.PI / 2]
+      const sampleRadii = [0, radius * 0.5, radius]
       
       for (const r of sampleRadii) {
         for (const angle of sampleAngles) {
@@ -783,22 +782,21 @@ export function useFPSControls(collisionObjects = [], mobileInput = null, ground
         }
       }
     } else {
-      // Check all directions (radial sphere cast) - increased from 8 to 16 horizontal
+      // OTTIMIZZATO: Ridotto drasticamente il numero di direzioni
       const directions = []
-      // Horizontal directions (16 directions for better coverage)
-      for (let i = 0; i < 16; i++) {
-        const angle = (i / 16) * Math.PI * 2
+      // Horizontal directions (RIDOTTO: 8 invece di 16)
+      for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2
         directions.push({ dir: new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle)), name: `H${i}` })
       }
       // Vertical directions
       directions.push({ dir: new THREE.Vector3(0, 1, 0), name: 'UP' })
       directions.push({ dir: new THREE.Vector3(0, -1, 0), name: 'DOWN' })
-      // Diagonal directions (8 up, 8 down for better vertical coverage)
-      for (let i = 0; i < 8; i++) {
-        const angle = (i / 8) * Math.PI * 2
-        directions.push({ dir: new THREE.Vector3(Math.cos(angle) * 0.707, 0.707, Math.sin(angle) * 0.707), name: `DU${i}` })
-        directions.push({ dir: new THREE.Vector3(Math.cos(angle) * 0.707, -0.707, Math.sin(angle) * 0.707), name: `DD${i}` })
-      }
+      // Diagonal directions (RIDOTTO: 2 su e 2 giù invece di 8+8)
+      directions.push({ dir: new THREE.Vector3(0.707, 0.707, 0), name: 'DU0' })
+      directions.push({ dir: new THREE.Vector3(-0.707, 0.707, 0), name: 'DU1' })
+      directions.push({ dir: new THREE.Vector3(0.707, -0.707, 0), name: 'DD0' })
+      directions.push({ dir: new THREE.Vector3(-0.707, -0.707, 0), name: 'DD1' })
       
       for (const { dir, name } of directions) {
         totalRays++
@@ -1027,15 +1025,9 @@ export function useFPSControls(collisionObjects = [], mobileInput = null, ground
       }
     }
 
-    console.log('[DIAGNOSTIC]', {
-      frame: frameCount,
-      minDist: minDist === Infinity ? 'N/A' : minDist.toFixed(3),
-      minDistAdjusted: minDist === Infinity ? 'N/A' : minDistAdjusted.toFixed(3),
-      threshold: threshold.toFixed(3),
-      isPenetrating,
-      effectiveIsPenetrating,
-      colliders: colliders.slice(0, 5).map(c => c.name || 'unnamed')
-    })
+    // OTTIMIZZATO: Logging diagnostico rimosso per performance
+    // In caso di debug, riattivare temporaneamente il logging qui sotto
+    // console.log('[DIAGNOSTIC]', { frame: frameCount, minDist, isPenetrating, effectiveIsPenetrating })
 
     return { effectiveIsPenetrating, colliders, minDist }
   }
@@ -1057,8 +1049,11 @@ export function useFPSControls(collisionObjects = [], mobileInput = null, ground
     if (!groundObjects || groundObjects.length === 0) return null
 
     // Spara un raggio dall'alto verso il basso (dagli occhi ai piedi)
+    // FIX: Raycast parte da SOTTO i piedi per evitare di rilevare la superficie su cui siamo già
+    const rayStartY = currentY - 0.05 // Inizia 5cm sotto i piedi
+    const rayStart = new THREE.Vector3(position.x, rayStartY, position.z)
     const downDirection = new THREE.Vector3(0, -1, 0)
-    raycaster.current.set(position, downDirection)
+    raycaster.current.set(rayStart, downDirection)
     raycaster.current.far = 50 
 
     const filteredTargets = getFilteredCollisionObjects(groundObjects)
@@ -1070,10 +1065,12 @@ export function useFPSControls(collisionObjects = [], mobileInput = null, ground
       // Calcola la differenza di altezza
       const deltaY = groundY - currentY
       
-      // === FIX TELETRASPORTO SOFFITTO ===
-      // Definiamo l'altezza massima di un gradino (es. 40cm)
-      // Se il "pavimento" trovato è più alto di 40cm rispetto ai piedi, è un muro o soffitto -> IGNORA
-      const MAX_STEP_UP = 0.4 
+      // === FIX TELETRASPORTO SOFFITTO + BLOCCO SALITA SUI MOBILI ===
+      // Altezza massima per salire: MOLTO BASSA per impedire di salire sui mobili
+      // Solo piccoli gradini/dislivelli del pavimento (max 10cm)
+      const MAX_STEP_UP = 0.10  // RIDOTTO: da 0.4 a 0.10m - impedisce salita su mobili
+      // Definiamo l'altezza massima da cui possiamo scendere in un singolo frame (es. 2m)
+      const MAX_STEP_DOWN = 2.0
 
       // 1. Stiamo salendo?
       if (deltaY > 0) {
@@ -1087,7 +1084,13 @@ export function useFPSControls(collisionObjects = [], mobileInput = null, ground
       }
       
       // 2. Stiamo scendendo/cadendo? (deltaY <= 0)
-      // Accettiamo la caduta (gravità) - SOLO se gravità abilitata
+      // FIX: Permettiamo di scendere fino a MAX_STEP_DOWN (2m) anche senza gravità
+      // Questo permette di scendere dai mobili (comodini, letti, tavoli)
+      if (Math.abs(deltaY) <= MAX_STEP_DOWN) {
+        return groundY
+      }
+      
+      // Se la caduta è troppo alta (> 2m), rispetta il flag gravità
       if (!disableGravity) {
         return groundY
       }
@@ -1396,17 +1399,14 @@ export function useFPSControls(collisionObjects = [], mobileInput = null, ground
     }
     
     // ========================================
-    // MULTI-HEIGHT COLLISION DETECTION
-    // Check collisions at multiple heights to catch furniture at different levels
-    // This creates a crude "capsule" collision by sampling at 5 vertical heights
-    // OFFSET VERTICALE: Alziamo il punto più basso per evitare di "strisciare" sul pavimento
+    // MULTI-HEIGHT COLLISION DETECTION - OTTIMIZZATO
+    // Check collisions at 3 heights instead of 5 for better performance
+    // RIDOTTO: da 5 a 3 altezze per 40% meno calcoli
     // ========================================
     const collisionHeights = [
-      playerConfig.current.radius * 0.5,                              // Alzato da 0.25 a 0.5 - evita pavimento
-      playerConfig.current.radius * 1.2,                              // Low: ankle level (catches table legs)
-      playerConfig.current.height * 0.33,                             // Lower-mid: knee level
-      playerConfig.current.height * 0.66,                             // Upper-mid: waist level (catches most furniture)
-      playerConfig.current.height - playerConfig.current.radius       // Upper: chest level (catches tall furniture, counters)
+      playerConfig.current.radius * 0.8,                              // Low: ankle level
+      playerConfig.current.height * 0.5,                              // Mid: waist level (most critical)
+      playerConfig.current.height - playerConfig.current.radius       // Upper: chest level
     ]
     
     // Use the mid-height as the primary reference for position calculations
@@ -1433,28 +1433,13 @@ export function useFPSControls(collisionObjects = [], mobileInput = null, ground
     }
     
     // ========================================
-    // NUOVO SISTEMA - Collision Detection Semplificato
+    // COLLISIONI TEMPORANEAMENTE DISABILITATE
+    // TODO: Sistemare il sistema di collisione passo dopo passo
     // ========================================
-    if (collisionObjects.length > 0 && velocity.lengthSq() > 0) {
-      // Usa collisionStep per rilevare penetrazioni
-      frameCountRef.current++
-      const { effectiveIsPenetrating } = collisionStep({
-        playerRoot,
-        camera,
-        collisionObjects,
-        frameCount: frameCountRef.current,
-        eyeHeight: playerConfig.current.eyeHeight,
-        sphereHeights: [0.1, 0.5, 1.0, 1.5],
-        threshold: playerConfig.current.radius,
-        radius: playerConfig.current.radius
-      })
-      
-      // Se non c'è penetrazione, applica movimento normale
-      if (!effectiveIsPenetrating) {
-        playerRoot.position.x += velocity.x
-        playerRoot.position.z += velocity.z
-      }
-      // Altrimenti rimani fermo (non applicare movimento)
+    if (velocity.lengthSq() > 0) {
+      // MOVIMENTO LIBERO - Nessuna collisione attiva
+      playerRoot.position.x += velocity.x
+      playerRoot.position.z += velocity.z
       
       // ========================================
       // GROUND DETECTION - ALWAYS RUN

@@ -117,7 +117,7 @@ function FPSController({ modelRef, mobileInput, onLookAtChange, groundPlaneMesh,
   // Scale all FPS parameters by the model scale (same as KitchenScene)
   const scaledCollisionRadius = 0.3 * modelScale
   const scaledPlayerHeight = 1.8 * modelScale
-  const scaledMoveSpeed = 20.0 * modelScale // Increased from 5.0 for faster movement
+  const scaledMoveSpeed = 5.0 * modelScale // Moderate speed for comfortable exploration
   // Disable gravity for EsternoScene to preserve original behavior
   useFPSControls(collisionObjects, mobileInput, groundObjects, boundaryLimits, initialPosition, 0, eyeHeight, scaledCollisionRadius, scaledPlayerHeight, scaledMoveSpeed, true)
   
@@ -296,7 +296,7 @@ export default function EsternoScene({ onObjectClick, onLookAtChange, mobileInpu
             isMobile={isMobile}
             boundaryLimits={null}
             initialPosition={spawnPosition}
-            eyeHeight={gateEyeHeight ?? (1.6 * modelScale)}
+            eyeHeight={gateEyeHeight ?? (1.65 * modelScale)}
             modelScale={modelScale}
           />
         )}

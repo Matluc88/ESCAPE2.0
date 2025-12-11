@@ -62,7 +62,7 @@ function FPSController({ modelRef, mobileInput, onLookAtChange, groundPlaneMesh,
   // Scala tutti i parametri FPS usando modelScale (come EsternoScene)
   const scaledCollisionRadius = 0.3 * modelScale
   const scaledPlayerHeight = 1.8 * modelScale
-  const scaledMoveSpeed = 20.0 * modelScale
+  const scaledMoveSpeed = 2.0 * modelScale
   
   useEffect(() => {
     if (!modelRef.current) return
@@ -207,8 +207,8 @@ export default function LivingRoomScene({ onObjectClick, onLookAtChange, mobileI
   // === CONFIGURAZIONE FISICA AGGIORNATA ===
   const MODEL_SCALE = 1
   
-  // ALTEZZA OCCHI: 1.1 per una prospettiva più naturale
-  const EYE_HEIGHT = 1.1 * MODEL_SCALE 
+  // ALTEZZA OCCHI: 1.6 per una prospettiva naturale
+  const EYE_HEIGHT = 1.6 * MODEL_SCALE
   
   const COLLISION_RADIUS = 0.3 * MODEL_SCALE
   const PLAYER_HEIGHT = 1.8 * MODEL_SCALE // Il corpo resta alto per le collisioni

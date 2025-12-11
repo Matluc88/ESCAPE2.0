@@ -106,11 +106,45 @@ export default function CasaModel({
     
     const box = new Box3().setFromObject(scene)
     const center = new Vector3(); box.getCenter(center)
+    
+    // TROVA IL PAVIMENTO DEL PIANO TERRA (non il minimo assoluto che potrebbe essere la cantina)
     let targetGroundY = box.min.y
-
-    if (sceneType === 'esterno') {
-       let gMesh = null; scene.traverse(o => { if (o.isMesh && o.name && o.name.toLowerCase().includes('giardino')) gMesh = o })
-       if (gMesh) targetGroundY = new Box3().setFromObject(gMesh).min.y
+    let mainFloorY = null
+    
+    scene.traverse(o => {
+      if (o.isMesh && o.name) {
+        const name = o.name.toLowerCase()
+        
+        // Cerca il pavimento/terreno principale (giardino per esterno, pavimenti per interno)
+        let isMainGround = false
+        
+        if (sceneType === 'esterno') {
+          // Per esterno: cerca giardino, prato, terreno
+          isMainGround = /giardino|prato|grass|ground|terreno/i.test(name) && !/cantina|basement|seminterrato/i.test(name)
+        } else {
+          // Per scene interne: cerca pavimenti del piano terra (escludi cantina)
+          isMainGround = /pattern|piano|pavimento|floor/i.test(name) && !/cantina|basement|seminterrato/i.test(name)
+        }
+        
+        if (isMainGround) {
+          if (!o.geometry.boundingBox) o.geometry.computeBoundingBox()
+          const objBox = new Box3().setFromObject(o)
+          const floorY = objBox.min.y
+          
+          // Prendi il pavimento più ALTO tra quelli trovati (piano terra/giardino, non cantina)
+          if (mainFloorY === null || floorY > mainFloorY) {
+            mainFloorY = floorY
+            console.log(`[CasaModel] 🏠 ${sceneType === 'esterno' ? 'Giardino' : 'Piano terra'} trovato: "${o.name}" a Y=${floorY.toFixed(3)}`)
+          }
+        }
+      }
+    })
+    
+    if (mainFloorY !== null) {
+      targetGroundY = mainFloorY
+      console.log(`[CasaModel] ✅ Usando ${sceneType === 'esterno' ? 'giardino' : 'pavimento piano terra'} come riferimento: Y=${targetGroundY.toFixed(3)}`)
+    } else {
+      console.warn(`[CasaModel] ⚠️ Pavimento principale non trovato, uso min.y=${targetGroundY.toFixed(3)}`)
     }
     
     groupRef.current.position.set(-center.x, -targetGroundY, -center.z)
