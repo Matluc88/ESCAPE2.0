@@ -126,7 +126,7 @@ export function useFPSControls(collisionObjects = [], mobileInput = null, ground
   // Set CAMERA_DEBUG to true to enable collision debugging
   // In production, this should be false to avoid console spam
   // ========================================
-  const CAMERA_DEBUG = true // ATTIVATO per debug collisioni
+  const CAMERA_DEBUG = false // DISATTIVATO per performance - attivare solo per debug
   const CAMERA_DEBUG_FLAGS = {
     sphereCast: false,       // Log sphere-cast hits, distances, directions (VERBOSE)
     antiTunnelling: false,   // Log anti-tunnelling checks (VERBOSE)
@@ -182,22 +182,27 @@ export function useFPSControls(collisionObjects = [], mobileInput = null, ground
     playerConfig.current.eyeHeight = eyeHeight
     playerConfig.current.moveSpeed = moveSpeed
     playerConfig.current.cameraCollisionRadius = collisionRadius * 0.5
-    console.log('[FPS Controls] Updated playerConfig from props:', {
-      moveSpeed,
-      collisionRadius,
-      playerHeight,
-      eyeHeight
-    })
+    if (CAMERA_DEBUG) {
+      console.log('[FPS Controls] Updated playerConfig from props:', {
+        moveSpeed,
+        collisionRadius,
+        playerHeight,
+        eyeHeight
+      })
+    }
   }, [moveSpeed, collisionRadius, playerHeight, eyeHeight])
   
   // Log collision objects when they change - helps debug collision issues
+  // Only log when CAMERA_DEBUG is enabled to avoid performance issues
   useEffect(() => {
-    console.log('[FPS Controls] collisionObjects updated:', collisionObjects.length)
-    if (collisionObjects.length > 0) {
-      console.log('[FPS Controls] First 5 collidable objects:', collisionObjects.slice(0, 5).map(o => ({
-        name: o.name,
-        userData: o.userData
-      })))
+    if (CAMERA_DEBUG) {
+      console.log('[FPS Controls] collisionObjects updated:', collisionObjects.length)
+      if (collisionObjects.length > 0) {
+        console.log('[FPS Controls] First 5 collidable objects:', collisionObjects.slice(0, 5).map(o => ({
+          name: o.name,
+          userData: o.userData
+        })))
+      }
     }
   }, [collisionObjects])
   
@@ -1433,28 +1438,59 @@ export function useFPSControls(collisionObjects = [], mobileInput = null, ground
     }
     
     // ========================================
-    // NUOVO SISTEMA - Collision Detection Semplificato
+    // NUOVO SISTEMA - Wall Sliding Collision Detection
+    // Usa checkRadialCollisions + calculateSlideVector per movimento fluido
     // ========================================
     if (collisionObjects.length > 0 && velocity.lengthSq() > 0) {
-      // Usa collisionStep per rilevare penetrazioni
       frameCountRef.current++
-      const { effectiveIsPenetrating } = collisionStep({
-        playerRoot,
-        camera,
-        collisionObjects,
-        frameCount: frameCountRef.current,
-        eyeHeight: playerConfig.current.eyeHeight,
-        sphereHeights: [0.1, 0.5, 1.0, 1.5],
-        threshold: playerConfig.current.radius,
-        radius: playerConfig.current.radius
-      })
       
-      // Se non c'è penetrazione, applica movimento normale
-      if (!effectiveIsPenetrating) {
-        playerRoot.position.x += velocity.x
-        playerRoot.position.z += velocity.z
+      // Calcola la posizione proposta
+      const proposedX = playerRoot.position.x + velocity.x
+      const proposedZ = playerRoot.position.z + velocity.z
+      const proposedPosition = new THREE.Vector3(proposedX, playerRoot.position.y + primaryCollisionHeight, proposedZ)
+      
+      // Controlla collisioni radiali nella direzione del movimento
+      const collisions = checkRadialCollisions(proposedPosition, movementDistance, true)
+      
+      if (collisions.length === 0) {
+        // Nessuna collisione - applica movimento normale
+        playerRoot.position.x = proposedX
+        playerRoot.position.z = proposedZ
+      } else {
+        // Collisione rilevata - calcola sliding vector
+        // Trova la collisione più vicina
+        let closestCollision = collisions[0]
+        for (const col of collisions) {
+          if (col.distance < closestCollision.distance) {
+            closestCollision = col
+          }
+        }
+        
+        // Calcola la normale del muro dalla direzione della collisione
+        // L'angolo della collisione ci dice da che direzione abbiamo colpito il muro
+        const wallNormal = new THREE.Vector3(
+          -Math.sin(closestCollision.angle),
+          0,
+          -Math.cos(closestCollision.angle)
+        ).normalize()
+        
+        // Calcola il vettore di sliding (movimento parallelo al muro)
+        const slideVelocity = calculateSlideVector(velocity, wallNormal)
+        
+        // Verifica che lo sliding non causi una nuova collisione
+        const slideProposedX = playerRoot.position.x + slideVelocity.x
+        const slideProposedZ = playerRoot.position.z + slideVelocity.z
+        const slideProposedPosition = new THREE.Vector3(slideProposedX, playerRoot.position.y + primaryCollisionHeight, slideProposedZ)
+        
+        const slideCollisions = checkRadialCollisions(slideProposedPosition, slideVelocity.length(), true)
+        
+        if (slideCollisions.length === 0) {
+          // Sliding sicuro - applica movimento di sliding
+          playerRoot.position.x = slideProposedX
+          playerRoot.position.z = slideProposedZ
+        }
+        // Se anche lo sliding causa collisione, non muovere (corner case)
       }
-      // Altrimenti rimani fermo (non applicare movimento)
       
       // ========================================
       // GROUND DETECTION - ALWAYS RUN
