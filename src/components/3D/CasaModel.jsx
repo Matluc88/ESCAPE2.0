@@ -164,12 +164,17 @@ export default function CasaModel({
     scene.traverse((child) => {
       const name = child.name ? child.name.toLowerCase() : ''
       
-      // Spawn
+      // Spawn - cerca nodi che iniziano con spawnNodeName (i nodi GLB hanno UUID aggiunto)
       if (spawnNodeName && !foundSpawnPoint) {
-         if (child.name === spawnNodeName || name === spawnNodeName.toLowerCase()) {
+         const spawnNameLower = spawnNodeName.toLowerCase()
+         // Match esatto O nome che inizia con spawnNodeName (per gestire UUID come INIZIO_CUCINA(UUID))
+         if (child.name === spawnNodeName || 
+             name === spawnNameLower || 
+             name.startsWith(spawnNameLower + '(') ||
+             child.name.startsWith(spawnNodeName + '(')) {
              const wp = new Vector3(); child.getWorldPosition(wp)
              foundSpawnPoint = { x: wp.x, y: wp.y, z: wp.z }
-             console.log(`[CasaModel] ✅ SPAWN: ${child.name}`, foundSpawnPoint)
+             console.log(`[CasaModel] ✅ SPAWN TROVATO: "${child.name}" -> pos:`, foundSpawnPoint)
              child.visible = false 
          }
       }
